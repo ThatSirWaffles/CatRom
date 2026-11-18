@@ -2,7 +2,7 @@
 
 Creates Catmull-Rom splines for Roblox.
 
-> [!CAUTION]
+> [!IMPORTANT]
 > This repository is an archive of ecurtiss aka toaditive's work. None of the code here is mine, nor do I reserve any rights to it. This only exists to keep an archive of the project and its documentation alive.
 
 ## Introduction
