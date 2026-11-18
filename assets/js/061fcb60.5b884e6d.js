@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocs=self.webpackChunkdocs||[]).push([[125],{4410:s=>{s.exports=JSON.parse('{"sourceUrl":"https://github.com/ThatSirWaffles/CatRom/blob/main","baseUrl":"/","classOrder":[],"apiCategories":[]}')}}]);
