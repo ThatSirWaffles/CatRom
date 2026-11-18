@@ -3,4 +3,4 @@ title = "CatRom"
 gitSourceBranch = "main"
 
 [docusaurus]
-baseUrl = "/"
+baseUrl = "/CatRom/"
