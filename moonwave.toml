@@ -1,0 +1,6 @@
+title = "CatRom"
+
+gitSourceBranch = "main"
+
+[docusaurus]
+baseUrl = "/"
