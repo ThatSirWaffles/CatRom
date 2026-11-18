@@ -121,4 +121,4 @@ end
 
 ## API Reference
 
-The [API reference](https://catrom.woffl.net/api) contains detailed documentation for the `CatRom` methods and the supporting modules used internally by the library.
+The [API reference](https://thatsirwaffles.github.io/CatRom/api/) contains detailed documentation for the `CatRom` methods and the supporting modules used internally by the library.
