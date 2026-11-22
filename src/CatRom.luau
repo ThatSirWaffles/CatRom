@@ -7,6 +7,8 @@ local DEFAULT_TENSION = 0
 local DEFAULT_CHEB_DEGREE = 8
 local DEFAULT_RMF_PRECOMPUTES = 4
 local EPSILON = 2e-7
+local CLOSEST_POINT_ITERATIONS = 3
+local CLOSEST_POINT_TOLERANCE = 1e-5
 
 --[=[
 	@class CatRom
@@ -88,7 +90,7 @@ function CatRom.new(points: {Types.Point}, alpha: number?, tension: number?, loo
 	assert(type(alpha) == "number", "Alpha must be a number")
 	assert(type(tension) == "number", "Tension must be a number")
 	assert(#points > 0, "Points table cannot be empty")
-	
+
 	local pointType = typeof(points[1])
 	assert(pointType == "Vector2" or pointType == "Vector3" or pointType == "CFrame",
 		"Points must be a table of Vector2s, Vector3s, or CFrames")
@@ -462,7 +464,7 @@ function CatRom:GetTransportInterpolant(
 	from = from or 0
 	to = to or 1
 	assert(from >= 0 and from <= 1 and to >= 0 and to <= 1, "Times must be in [0, 1]")
-	
+
 	local dataType = typeof(data)
 	local dataIsVector3 = dataType == "Vector3"
 	assert(dataIsVector3 or dataType == "CFrame", "Bad data: Can only parallel transport Vector3s and CFrames")
@@ -769,13 +771,13 @@ function CatRom:SolveLength(from: number?, to: number?): number
 	local a = from or 0
 	local b = to or 1
 	a, b = math.min(a, b), math.max(a, b)
-	
+
 	if a == 0 and b == 1 then
 		return self.length
 	end
 
 	assert(a >= 0 and b <= 1, "Times must be in [0, 1]")
-	
+
 	local segmentA, segmentATime, segmentAIndex = self:GetSegmentAtTime(a)
 	local segmentB, segmentBTime, segmentBIndex = self:GetSegmentAtTime(b)
 
@@ -792,6 +794,86 @@ function CatRom:SolveLength(from: number?, to: number?): number
 	end
 
 	return lengthA + intermediateLengths + lengthB
+end
+
+--[=[
+	Returns the time `t` of the point on the spline closest to `position`,
+	searching only near `previousT` (warm-started Newton's method).
+
+	@param position -- The point to project onto the spline
+	@param previousT -- The result of the previous call (default: 0)
+	@param searchRadius -- If given, coarsely samples [previousT - r, previousT + r] first to pick a better starting guess, for when the target can move fast between calls
+	@param iterations -- Max Newton iterations (default: 3)
+	@return number -- The time of the closest point, in the same domain as `SolvePosition(t)` with `unitSpeed` false
+	@tag Vector3
+	@tag CFrame
+	@tag Extensions
+]=]
+function CatRom:SolveClosestPoint(
+	position: Vector3,
+	previousT: number?,
+	searchRadius: number?,
+	iterations: number?
+): number
+	if self.length == 0 then
+		return 0
+	end
+
+	local segments = self.segments
+	local knots = self.knots
+	local t = math.clamp(previousT or 0, 0, 1)
+
+	-- Optional coarse seed: a handful of samples around previousT
+	if searchRadius and searchRadius > 0 then
+		local lo = math.max(0, t - searchRadius)
+		local hi = math.min(1, t + searchRadius)
+		local bestT, bestDistSq = t, math.huge
+		local SAMPLES = 6
+		for k = 0, SAMPLES - 1 do
+			local candidate = lo + (hi - lo) * k / (SAMPLES - 1)
+			local d = self:SolvePosition(candidate) - position
+			local distSq = d:Dot(d)
+			if distSq < bestDistSq then
+				bestT, bestDistSq = candidate, distSq
+			end
+		end
+		t = bestT
+	end
+
+	-- Newton on f(t) = (S(t) - p) . S'(t), whose root is where the offset
+	-- from the spline to p is perpendicular to the tangent.
+	for _ = 1, iterations or CLOSEST_POINT_ITERATIONS do
+		local segment, s, index = self:GetSegmentAtTime(t)
+		local width = knots[index + 1] - knots[index] -- dt = width * ds
+
+		local offset = segment:SolvePosition(s) - position
+		local vel = segment:SolveVelocity(s)
+		local acc = segment:SolveAcceleration(s)
+
+		local speedSq = vel:Dot(vel)
+		if speedSq < EPSILON then
+			break
+		end
+
+		local numerator = offset:Dot(vel)
+		local denominator = speedSq + offset:Dot(acc) -- f'(s)
+
+		-- Near a local max of distance f' can be <= 0; fall back to a
+		-- Gauss-Newton step, which is always well-behaved
+		if denominator < 0.1 * speedSq then
+			denominator = speedSq
+		end
+
+		-- Clamp to one segment so a bad step can't teleport us
+		local dt = math.clamp(-width * numerator / denominator, -width, width)
+		t = math.clamp(t + dt, 0, 1)
+
+		if math.abs(dt) < CLOSEST_POINT_TOLERANCE then
+			break
+		end
+	end
+
+	return t
 end
 
 --[=[
@@ -820,7 +902,7 @@ function CatRom:SolveBulk(
 	assert(a <= b, "Time \"from\" cannot be greater than time \"to\"")
 	assert(a >= 0 and b <= 1, "Times must be in [0, 1]")
 	assert(type(numSamples) == "number", "Bad numSamples")
-	
+
 	numSamples = math.round(numSamples)
 	if numSamples < 1 then
 		return
@@ -834,7 +916,7 @@ function CatRom:SolveBulk(
 
 	-- First sample
 	f(segmentA, segmentATime)
-	
+
 	-- Samples 2, ..., numSamples - 1
 	local lerpIncrement = (b - a) / (numSamples - 1)
 	local previousDomainMax = knots[segmentAIndex]
@@ -931,7 +1013,7 @@ function CatRom:CreateTween(
 
 	local numberValue = Instance.new("NumberValue")
 	numberValue.Value = from
-	
+
 	local tween = TweenService:Create(numberValue, tweenInfo, { Value = to })
 
 	local conn = numberValue:GetPropertyChangedSignal("Value"):Connect(function()
