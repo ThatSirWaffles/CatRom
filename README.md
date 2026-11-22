@@ -8,7 +8,7 @@ Creates Catmull-Rom splines for Roblox.
 
 ## Introduction
 
-A [Catmull-Rom spline](https://web.archive.org/web/20251203222052/https://en.wikipedia.org/wiki/Centripetal_Catmull%E2%80%93Rom_spline) is a C¹ cubic spline that passes through each of its control points. It is a good choice for your project if you want a smooth curve that:
+A [Catmull-Rom spline](https://en.wikipedia.org/wiki/Centripetal_Catmull%E2%80%93Rom_spline) is a C¹ cubic spline that passes through each of its control points. It is a good choice for your project if you want a smooth curve that:
 
 1. Passes through every control point.
 2. Does not need any extra data to sculpt it, unlike Bézier curves.
