@@ -1,6 +1,6 @@
 > [!IMPORTANT]
 > This repository is an archive of ecurtiss aka toaditive's work. None of the original code here is mine, nor do I reserve any rights to it. This only exists to keep an archive of the project and its documentation alive.
-> I am planning on maintaining this project and adding features to a certain extent. PRs to help out a welcome.
+> I am planning on maintaining this project and adding features to a certain extent. PRs welcome!
 
 # CatRom
 
